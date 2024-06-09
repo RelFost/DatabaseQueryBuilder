@@ -7,13 +7,13 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;  // Убедитесь, что вы установили пакет System.Data.SQLite через NuGet
+using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
 using Npgsql;
 using MySql.Data.MySqlClient;
-using YamlDotNet.Serialization; // Убедитесь, что вы установили пакет YamlDotNet через NuGet
+using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Newtonsoft.Json;
 
@@ -36,7 +36,7 @@ namespace Extension.DatabaseQueryBuilder
             config = LoadConfig(configFilePath);
             currentDatabase = config.connections[config.@default];
 
-            // Установить путь к файлу базы данных для SQLite
+
             if (currentDatabase.driver == "sqlite")
             {
                 var sqliteDatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "data", $"{nameof(DatabaseQueryBuilder)}", "database.sqlite");
