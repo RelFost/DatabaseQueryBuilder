@@ -8,7 +8,7 @@
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <BaseOutputPath>
     </BaseOutputPath>
-    <Version>1.0.1.6</Version>
+    <Version>1.0.1.7</Version>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Oxide|AnyCPU'">
     <DefineConstants>$(DefineConstants)TRACE;RUST</DefineConstants>
