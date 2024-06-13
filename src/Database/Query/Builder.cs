@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Relfost.Database;
 using Newtonsoft.Json;
 
 namespace Relfost.Database.Query
@@ -43,73 +44,9 @@ namespace Relfost.Database.Query
             return this;
         }
 
-        public Builder addSelect(params string[] columns)
-        {
-            _selectColumns.AddRange(columns);
-            return this;
-        }
-
-        public Builder distinct()
-        {
-            _selectColumns.Insert(0, "DISTINCT");
-            return this;
-        }
-
         public Builder where(string column, string operation, object value)
         {
             _whereConditions.Add($"{column} {operation} '{value}'");
-            return this;
-        }
-
-        public Builder where(string column, object value)
-        {
-            return where(column, "=", value);
-        }
-
-        public Builder orWhere(string column, string operation, object value)
-        {
-            _whereConditions.Add($"OR {column} {operation} '{value}'");
-            return this;
-        }
-
-        public Builder orWhere(string column, object value)
-        {
-            return orWhere(column, "=", value);
-        }
-
-        public Builder whereRaw(string sql, params object[] bindings)
-        {
-            _whereConditions.Add(BindingsToSql(sql, bindings));
-            return this;
-        }
-
-        public Builder orWhereRaw(string sql, params object[] bindings)
-        {
-            _whereConditions.Add($"OR {BindingsToSql(sql, bindings)}");
-            return this;
-        }
-
-        public Builder havingRaw(string sql, params object[] bindings)
-        {
-            _havingConditions.Add(BindingsToSql(sql, bindings));
-            return this;
-        }
-
-        public Builder orHavingRaw(string sql, params object[] bindings)
-        {
-            _havingConditions.Add($"OR {BindingsToSql(sql, bindings)}");
-            return this;
-        }
-
-        public Builder orderByRaw(string sql, params object[] bindings)
-        {
-            _orderByStatements.Add(BindingsToSql(sql, bindings));
-            return this;
-        }
-
-        public Builder groupByRaw(string sql, params object[] bindings)
-        {
-            _groupByColumns.Add(BindingsToSql(sql, bindings));
             return this;
         }
 
@@ -165,24 +102,6 @@ namespace Relfost.Database.Query
         public Builder join(string table, string first, string operation, string second)
         {
             _joinStatements.Add($"JOIN {table} ON {first} {operation} {second}");
-            return this;
-        }
-
-        public Builder leftJoin(string table, string first, string operation, string second)
-        {
-            _joinStatements.Add($"LEFT JOIN {table} ON {first} {operation} {second}");
-            return this;
-        }
-
-        public Builder rightJoin(string table, string first, string operation, string second)
-        {
-            _joinStatements.Add($"RIGHT JOIN {table} ON {first} {operation} {second}");
-            return this;
-        }
-
-        public Builder crossJoin(string table)
-        {
-            _joinStatements.Add($"CROSS JOIN {table}");
             return this;
         }
 
@@ -391,57 +310,77 @@ namespace Relfost.Database.Query
 
         public async Task<object[]> toArray()
         {
-            var table = await get();
-            return table.Rows.Cast<DataRow>().Select(row => row.ItemArray).ToArray();
+            var dataTable = await get();
+            return dataTable.Rows.Cast<DataRow>().Select(row => row.ItemArray).ToArray();
         }
 
         public async Task<DataRow> first()
         {
-            var table = await get();
-            return table.Rows.Cast<DataRow>().FirstOrDefault();
+            using var connection = _dbExtension.getConnection();
+            await connection.OpenAsync();
+
+            if (!string.IsNullOrEmpty(_dbExtension.currentSchema) && _dbExtension.currentDatabase.driver == "pgsql")
+            {
+                using var schemaCommand = connection.CreateCommand();
+                schemaCommand.CommandText = $"SET search_path TO {_dbExtension.currentSchema}";
+                await schemaCommand.ExecuteNonQueryAsync();
+            }
+
+            var query = buildQuery();
+            query += " LIMIT 1";
+
+            using var command = connection.CreateCommand();
+            command.CommandText = query;
+
+            var adapter = _dbExtension.getAdapter(command);
+            var dataSet = new DataSet();
+            await Task.Run(() => adapter.Fill(dataSet));
+
+            return dataSet.Tables[0].Rows.Count > 0 ? dataSet.Tables[0].Rows[0] : null;
         }
 
         public async Task<object> value(string column)
         {
-            var row = await first();
-            return row?[column];
+            var firstRow = await first();
+            return firstRow?[column];
         }
 
         public async Task<DataRow> find(object id)
         {
-            return await where("id", id).first();
+            where("id", "=", id);
+            return await first();
         }
 
-        public async Task<object[]> pluck(string column)
+        public async Task<List<object>> pluck(string column)
         {
-            var table = await get();
-            return table.Rows.Cast<DataRow>().Select(row => row[column]).ToArray();
+            var dataTable = await get();
+            return dataTable.Rows.Cast<DataRow>().Select(row => row[column]).ToList();
         }
 
         public async Task<List<Dictionary<string, object>>> pluck(params string[] columns)
         {
-            var table = await get();
-            return table.Rows.Cast<DataRow>()
-                .Select(row => columns.ToDictionary(column => column, column => row[column]))
-                .ToList();
+            var dataTable = await get();
+            return dataTable.Rows.Cast<DataRow>().Select(row =>
+            {
+                var dict = new Dictionary<string, object>();
+                foreach (var column in columns)
+                {
+                    dict[column] = row[column];
+                }
+                return dict;
+            }).ToList();
         }
 
         public async Task chunk(int count, Func<DataTable, Task<bool>> callback)
         {
-            var offset = 0;
+            int offset = 0;
             while (true)
             {
-                var results = await skip(offset).take(count).get();
-                if (results.Rows.Count == 0)
-                {
-                    break;
-                }
+                var chunkData = await limit(count).offset(offset).get();
+                if (chunkData.Rows.Count == 0) break;
 
-                var continueProcessing = await callback(results);
-                if (!continueProcessing)
-                {
-                    break;
-                }
+                var continueProcessing = await callback(chunkData);
+                if (!continueProcessing) break;
 
                 offset += count;
             }
@@ -449,172 +388,236 @@ namespace Relfost.Database.Query
 
         public async Task chunk(int count, Func<DataTable, Task> callback)
         {
-            await chunk(count, async chunk =>
+            await chunk(count, async data =>
             {
-                await callback(chunk);
+                await callback(data);
                 return true;
             });
         }
 
         public async Task chunkById(int count, Func<DataTable, Task<bool>> callback)
         {
-            var lastId = 0;
+            object lastId = null;
             while (true)
             {
-                var results = await where("id", ">", lastId).orderBy("id").take(count).get();
-                if (results.Rows.Count == 0)
+                var query = limit(count);
+                if (lastId != null)
                 {
-                    break;
+                    query = query.where("id", ">", lastId);
                 }
+                var chunkData = await query.orderBy("id").get();
+                if (chunkData.Rows.Count == 0) break;
 
-                var continueProcessing = await callback(results);
-                if (!continueProcessing)
-                {
-                    break;
-                }
+                var continueProcessing = await callback(chunkData);
+                if (!continueProcessing) break;
 
-                lastId = Convert.ToInt32(results.Rows[results.Rows.Count - 1]["id"]);
+                lastId = chunkData.Rows[chunkData.Rows.Count - 1]["id"];
             }
         }
 
         public async Task chunkById(int count, Func<DataTable, Task> callback)
         {
-            await chunkById(count, async chunk =>
+            await chunkById(count, async data =>
             {
-                await callback(chunk);
+                await callback(data);
+                return true;
+            });
+        }
+
+        public async Task<int> count()
+        {
+            var result = await scalar<int>("SELECT COUNT(*) FROM " + _tableName);
+            return result;
+        }
+
+        public async Task<T> max<T>(string column)
+        {
+            var result = await scalar<T>($"SELECT MAX({column}) FROM " + _tableName);
+            return result;
+        }
+
+        public async Task<T> min<T>(string column)
+        {
+            var result = await scalar<T>($"SELECT MIN({column}) FROM " + _tableName);
+            return result;
+        }
+
+        public async Task<T> avg<T>(string column)
+        {
+            var result = await scalar<T>($"SELECT AVG({column}) FROM " + _tableName);
+            return result;
+        }
+
+        public async Task<T> sum<T>(string column)
+        {
+            var result = await scalar<T>($"SELECT SUM({column}) FROM " + _tableName);
+            return result;
+        }
+
+        public async Task<bool> exists()
+        {
+            var result = await count();
+            return result > 0;
+        }
+
+        public async Task<bool> doesntExist()
+        {
+            var result = await count();
+            return result == 0;
+        }
+
+        public Builder addSelect(params string[] columns)
+        {
+            _selectColumns.AddRange(columns);
+            return this;
+        }
+
+        public Builder distinct()
+        {
+            if (!_selectColumns.Contains("DISTINCT"))
+            {
+                _selectColumns.Insert(0, "DISTINCT");
+            }
+            return this;
+        }
+
+        public Builder raw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _selectColumns.Add(sqlWithBindings);
+            return this;
+        }
+
+        public Builder selectRaw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _selectColumns.Add(sqlWithBindings);
+            return this;
+        }
+
+        public Builder whereRaw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _whereConditions.Add(sqlWithBindings);
+            return this;
+        }
+
+        public Builder orWhereRaw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _whereConditions.Add($"OR {sqlWithBindings}");
+            return this;
+        }
+
+        public Builder havingRaw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _havingConditions.Add(sqlWithBindings);
+            return this;
+        }
+
+        public Builder orHavingRaw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _havingConditions.Add($"OR {sqlWithBindings}");
+            return this;
+        }
+
+        public Builder orderByRaw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _orderByStatements.Add(sqlWithBindings);
+            return this;
+        }
+
+        public Builder groupByRaw(string sql, params object[] bindings)
+        {
+            var sqlWithBindings = BindingsToSql(sql, bindings);
+            _groupByColumns.Add(sqlWithBindings);
+            return this;
+        }
+
+        public Builder leftJoin(string table, string first, string operation, string second)
+        {
+            _joinStatements.Add($"LEFT JOIN {table} ON {first} {operation} {second}");
+            return this;
+        }
+
+        public Builder rightJoin(string table, string first, string operation, string second)
+        {
+            _joinStatements.Add($"RIGHT JOIN {table} ON {first} {operation} {second}");
+            return this;
+        }
+
+        public Builder crossJoin(string table)
+        {
+            _joinStatements.Add($"CROSS JOIN {table}");
+            return this;
+        }
+
+        public async Task lazy(Func<DataRow, Task> callback)
+        {
+            await chunk(int.MaxValue, async data =>
+            {
+                foreach (DataRow row in data.Rows)
+                {
+                    await callback(row);
+                }
+                return true;
+            });
+        }
+
+        public async Task lazyById(Func<DataRow, Task> callback)
+        {
+            await chunkById(int.MaxValue, async data =>
+            {
+                foreach (DataRow row in data.Rows)
+                {
+                    await callback(row);
+                }
+                return true;
+            });
+        }
+
+        public async Task lazyByIdDesc(Func<DataRow, Task> callback)
+        {
+            await chunkByIdDesc(int.MaxValue, async data =>
+            {
+                foreach (DataRow row in data.Rows)
+                {
+                    await callback(row);
+                }
                 return true;
             });
         }
 
         public async Task chunkByIdDesc(int count, Func<DataTable, Task<bool>> callback)
         {
-            var lastId = int.MaxValue;
+            object lastId = null;
             while (true)
             {
-                var results = await where("id", "<", lastId).orderBy("id", "desc").take(count).get();
-                if (results.Rows.Count == 0)
+                var query = limit(count);
+                if (lastId != null)
                 {
-                    break;
+                    query = query.where("id", "<", lastId);
                 }
+                var chunkData = await query.orderBy("id DESC").get();
+                if (chunkData.Rows.Count == 0) break;
 
-                var continueProcessing = await callback(results);
-                if (!continueProcessing)
-                {
-                    break;
-                }
+                var continueProcessing = await callback(chunkData);
+                if (!continueProcessing) break;
 
-                lastId = Convert.ToInt32(results.Rows[results.Rows.Count - 1]["id"]);
+                lastId = chunkData.Rows[chunkData.Rows.Count - 1]["id"];
             }
         }
 
         public async Task chunkByIdDesc(int count, Func<DataTable, Task> callback)
         {
-            await chunkByIdDesc(count, async chunk =>
+            await chunkByIdDesc(count, async data =>
             {
-                await callback(chunk);
+                await callback(data);
                 return true;
             });
-        }
-
-        public async Task<List<Dictionary<string, object>>> lazy()
-        {
-            var result = new List<Dictionary<string, object>>();
-            await chunk(100, async chunk =>
-            {
-                result.AddRange(chunk.Rows.Cast<DataRow>().Select(row => row.ItemArray.ToDictionary(item => item.ToString(), item => (object)item)));
-                return true;
-            });
-            return result;
-        }
-
-        public async Task<List<Dictionary<string, object>>> lazyById()
-        {
-            var result = new List<Dictionary<string, object>>();
-            await chunkById(100, async chunk =>
-            {
-                result.AddRange(chunk.Rows.Cast<DataRow>().Select(row => row.ItemArray.ToDictionary(item => item.ToString(), item => (object)item)));
-                return true;
-            });
-            return result;
-        }
-
-        public async Task<List<Dictionary<string, object>>> lazyByIdDesc()
-        {
-            var result = new List<Dictionary<string, object>>();
-            await chunkByIdDesc(100, async chunk =>
-            {
-                result.AddRange(chunk.Rows.Cast<DataRow>().Select(row => row.ItemArray.ToDictionary(item => item.ToString(), item => (object)item)));
-                return true;
-            });
-            return result;
-        }
-
-        public async Task<int> count()
-        {
-            var query = $"SELECT COUNT(*) FROM {_tableName} {buildWhere()}";
-            return await _dbExtension.scalar<int>(query);
-        }
-
-        public async Task<decimal> max(string column)
-        {
-            var query = $"SELECT MAX({column}) FROM {_tableName} {buildWhere()}";
-            return await _dbExtension.scalar<decimal>(query);
-        }
-
-        public async Task<decimal> min(string column)
-        {
-            var query = $"SELECT MIN({column}) FROM {_tableName} {buildWhere()}";
-            return await _dbExtension.scalar<decimal>(query);
-        }
-
-        public async Task<decimal> avg(string column)
-        {
-            var query = $"SELECT AVG({column}) FROM {_tableName} {buildWhere()}";
-            return await _dbExtension.scalar<decimal>(query);
-        }
-
-        public async Task<decimal> sum(string column)
-        {
-            var query = $"SELECT SUM({column}) FROM {_tableName} {buildWhere()}";
-            return await _dbExtension.scalar<decimal>(query);
-        }
-
-        public async Task<bool> exists()
-        {
-            var query = $"SELECT EXISTS(SELECT 1 FROM {_tableName} {buildWhere()} LIMIT 1)";
-            return await _dbExtension.scalar<bool>(query);
-        }
-
-        public async Task<bool> doesntExist()
-        {
-            return !(await exists());
-        }
-
-        public async Task<int> update(Dictionary<string, object> values)
-        {
-            using var connection = _dbExtension.getConnection();
-            await connection.OpenAsync();
-
-            var updates = string.Join(", ", values.Keys.Select(k => $"{k} = @{k}"));
-            var query = $"UPDATE {_tableName} SET {updates}";
-
-            if (_whereConditions.Any())
-            {
-                query += " WHERE " + string.Join(" AND ", _whereConditions);
-            }
-
-            using var command = connection.CreateCommand();
-            command.CommandText = query;
-
-            foreach (var pair in values)
-            {
-                var parameter = command.CreateParameter();
-                parameter.ParameterName = $"@{pair.Key}";
-                parameter.Value = pair.Value;
-                command.Parameters.Add(parameter);
-            }
-
-            return await command.ExecuteNonQueryAsync();
         }
 
         private string buildQuery()
@@ -691,6 +694,18 @@ namespace Relfost.Database.Query
             }
 
             return sql;
+        }
+
+        private async Task<T> scalar<T>(string query)
+        {
+            using var connection = _dbExtension.getConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = query;
+
+            var result = await command.ExecuteScalarAsync();
+            return (T)Convert.ChangeType(result, typeof(T));
         }
     }
 }

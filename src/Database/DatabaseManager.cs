@@ -8,9 +8,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Npgsql;
 using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Newtonsoft.Json;
 using System.Data.SQLite;
 using Relfost.Database.Query;
 
@@ -22,45 +22,33 @@ namespace Relfost.Database
         internal Configuration.DatabaseInfo currentDatabase;
         internal string currentSchema;
         internal Settings settings;
-        private readonly string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "logs", "extensions", "Relfost.Database.log");
+        private readonly string logFilePath;
 
         public DatabaseManager()
         {
-            try
+            var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "Relfost.Database", "config.yaml");
+            if (!File.Exists(configFilePath))
             {
-                var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "data", $"{nameof(DatabaseManager)}", "config.yaml");
-                if (!File.Exists(configFilePath))
-                {
-                    CreateDefaultConfigFile(configFilePath);
-                }
-                config = LoadConfig(configFilePath);
-                currentDatabase = config.connections[config.@default];
-
-                var settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "data", $"{nameof(DatabaseManager)}", "settings.yaml");
-                if (!File.Exists(settingsFilePath))
-                {
-                    CreateDefaultSettingsFile(settingsFilePath);
-                }
-                settings = LoadSettings(settingsFilePath);
-
-                EnsureAllSettingsPresent(settingsFilePath);
-
-                if (currentDatabase.driver == "sqlite")
-                {
-                    var sqliteDatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "data", $"{nameof(DatabaseManager)}", "database.sqlite");
-                    Directory.CreateDirectory(Path.GetDirectoryName(sqliteDatabasePath)); // Убедиться, что директория существует
-                    currentDatabase.database = sqliteDatabasePath;
-                }
-
-                // Test connection to validate configuration
-                using var connection = getConnection();
-                connection.Open();
-                connection.Close();
+                CreateDefaultConfigFile(configFilePath);
             }
-            catch (Exception ex)
+            config = LoadConfig(configFilePath);
+            currentDatabase = config.connections[config.@default];
+
+            var settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "Relfost.Database", "settings.yaml");
+            if (!File.Exists(settingsFilePath))
             {
-                LogError("Error initializing DatabaseManager: " + ex.Message);
+                CreateDefaultSettingsFile(settingsFilePath);
             }
+            settings = LoadSettings(settingsFilePath);
+
+            if (currentDatabase.driver == "sqlite")
+            {
+                var sqliteDatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "Relfost.Database", "database.sqlite");
+                Directory.CreateDirectory(Path.GetDirectoryName(sqliteDatabasePath)); // Убедиться, что директория существует
+                currentDatabase.database = sqliteDatabasePath;
+            }
+
+            logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "logs", "extensions", "Relfost.Database.log");
         }
 
         private void CreateDefaultConfigFile(string path)
@@ -100,62 +88,35 @@ namespace Relfost.Database
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .Build();
             var yaml = File.ReadAllText(path);
-            return deserializer.Deserialize<Settings>(yaml);
-        }
+            var settings = deserializer.Deserialize<Settings>(yaml);
 
-        private void EnsureAllSettingsPresent(string settingsFilePath)
-        {
-            var currentSettings = LoadSettings(settingsFilePath);
-            var updatedSettings = new Settings
+            // Проверить наличие всех обязательных параметров
+            if (settings.logging == null)
             {
-                managing_tables = currentSettings.managing_tables,
-                logging = currentSettings.logging ?? "consoleandfile"
-            };
+                settings.logging = "consoleandfile";
+            }
 
-            if (updatedSettings.logging != currentSettings.logging)
-            {
-                var serializer = new SerializerBuilder()
-                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                    .Build();
-                var yaml = serializer.Serialize(updatedSettings);
-                File.WriteAllText(settingsFilePath, yaml);
-                settings = updatedSettings;
-            }
-            else
-            {
-                settings = currentSettings;
-            }
-        }
+            var updatedYaml = new SerializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build()
+                .Serialize(settings);
+            File.WriteAllText(path, updatedYaml);
 
-        internal DatabaseManager schema(string schema)
-        {
-            if (currentDatabase.driver == "pgsql")
-            {
-                currentSchema = schema;
-            }
-            return this;
+            return settings;
         }
 
         internal DbConnection getConnection(string dbType = null)
         {
-            try
-            {
-                var databaseInfo = dbType == null ? currentDatabase : config.connections[dbType];
+            var databaseInfo = dbType == null ? currentDatabase : config.connections[dbType];
 
-                return databaseInfo.driver switch
-                {
-                    "pgsql" => new NpgsqlConnection(buildConnectionString(databaseInfo)),
-                    "mysql" => new MySqlConnection(buildConnectionString(databaseInfo)),
-                    "sqlite" => new SQLiteConnection(buildConnectionString(databaseInfo)),
-                    "mariadb" => new MySqlConnection(buildConnectionString(databaseInfo)),
-                    _ => throw new Exception("Unsupported database driver.")
-                };
-            }
-            catch (Exception ex)
+            return databaseInfo.driver switch
             {
-                LogError("Error getting database connection: " + ex.Message);
-                throw;
-            }
+                "pgsql" => new NpgsqlConnection(buildConnectionString(databaseInfo)),
+                "mysql" => new MySqlConnection(buildConnectionString(databaseInfo)),
+                "sqlite" => new SQLiteConnection(buildConnectionString(databaseInfo)),
+                "mariadb" => new MySqlConnection(buildConnectionString(databaseInfo)),
+                _ => throw new Exception("Unsupported database driver.")
+            };
         }
 
         private string buildConnectionString(Configuration.DatabaseInfo databaseInfo)
@@ -169,245 +130,9 @@ namespace Relfost.Database
             };
         }
 
-        public async Task<T> scalar<T>(string query, string dbType = null)
-        {
-            try
-            {
-                using var connection = getConnection(dbType);
-                await connection.OpenAsync();
-
-                if (!string.IsNullOrEmpty(currentSchema) && currentDatabase.driver == "pgsql")
-                {
-                    using var schemaCommand = connection.CreateCommand();
-                    schemaCommand.CommandText = $"SET search_path TO {currentSchema}";
-                    await schemaCommand.ExecuteNonQueryAsync();
-                }
-
-                using var command = connection.CreateCommand();
-                command.CommandText = query;
-
-                var result = await command.ExecuteScalarAsync();
-                return (T)Convert.ChangeType(result, typeof(T));
-            }
-            catch (Exception ex)
-            {
-                LogError("Error executing scalar query: " + ex.Message);
-                throw;
-            }
-        }
-
         public Builder table(string tableName)
         {
             return new Builder(this, tableName);
-        }
-
-        public async Task createTable(string tableName, Dictionary<string, string> columns)
-        {
-            if (!settings.managing_tables)
-            {
-                throw new InvalidOperationException("Managing tables is prohibited");
-            }
-
-            try
-            {
-                using var connection = getConnection();
-                await connection.OpenAsync();
-
-                var columnDefinitions = columns.Select(column => $"{column.Key} {column.Value}");
-                var query = $"CREATE TABLE {tableName} ({string.Join(", ", columnDefinitions)})";
-
-                using var command = connection.CreateCommand();
-                command.CommandText = query;
-                await command.ExecuteNonQueryAsync();
-            }
-            catch (Exception ex)
-            {
-                LogError("Error creating table: " + ex.Message);
-                throw;
-            }
-        }
-
-        public async Task<bool> tableExists(string tableName)
-        {
-            try
-            {
-                using var connection = getConnection();
-                await connection.OpenAsync();
-
-                string query = currentDatabase.driver switch
-                {
-                    "pgsql" => $"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = '{currentSchema}' AND table_name = '{tableName}');",
-                    "mysql" or "mariadb" => $"SHOW TABLES LIKE '{tableName}';",
-                    "sqlite" => $"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}';",
-                    _ => throw new Exception("Unsupported database driver.")
-                };
-
-                using var command = connection.CreateCommand();
-                command.CommandText = query;
-
-                var result = await command.ExecuteScalarAsync();
-                return result != null && result != DBNull.Value;
-            }
-            catch (Exception ex)
-            {
-                LogError("Error checking if table exists: " + ex.Message);
-                throw;
-            }
-        }
-
-        public async Task addIndex(string tableName, string indexName, params string[] columns)
-        {
-            if (!settings.managing_tables)
-            {
-                throw new InvalidOperationException("Managing tables is prohibited");
-            }
-
-            try
-            {
-                using var connection = getConnection();
-                await connection.OpenAsync();
-
-                var columnsList = string.Join(", ", columns);
-                var query = $"CREATE INDEX {indexName} ON {tableName} ({columnsList})";
-
-                using var command = connection.CreateCommand();
-                command.CommandText = query;
-                await command.ExecuteNonQueryAsync();
-            }
-            catch (Exception ex)
-            {
-                LogError("Error adding index: " + ex.Message);
-                throw;
-            }
-        }
-
-        public async Task dropIndex(string tableName, string indexName)
-        {
-            if (!settings.managing_tables)
-            {
-                throw new InvalidOperationException("Managing tables is prohibited");
-            }
-
-            try
-            {
-                using var connection = getConnection();
-                await connection.OpenAsync();
-
-                string query = currentDatabase.driver switch
-                {
-                    "pgsql" => $"DROP INDEX IF EXISTS {indexName};",
-                    "mysql" or "mariadb" => $"DROP INDEX {indexName} ON {tableName};",
-                    "sqlite" => $"DROP INDEX IF EXISTS {indexName};",
-                    _ => throw new Exception("Unsupported database driver.")
-                };
-
-                using var command = connection.CreateCommand();
-                command.CommandText = query;
-                await command.ExecuteNonQueryAsync();
-            }
-            catch (Exception ex)
-            {
-                LogError("Error dropping index: " + ex.Message);
-                throw;
-            }
-        }
-
-        public void UpdateConfig(Configuration newConfig)
-        {
-            try
-            {
-                var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "data", $"{nameof(DatabaseManager)}", "config.yaml");
-                var serializer = new SerializerBuilder()
-                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                    .Build();
-                var yaml = serializer.Serialize(newConfig);
-                File.WriteAllText(configFilePath, yaml);
-                config = newConfig;
-                currentDatabase = config.connections[config.@default];
-                LogInfo("Configuration updated successfully.");
-            }
-            catch (Exception ex)
-            {
-                LogError("Error updating configuration: " + ex.Message);
-                throw;
-            }
-        }
-
-        public void UpdateSettings(Settings newSettings)
-        {
-            try
-            {
-                var settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "data", $"{nameof(DatabaseManager)}", "settings.yaml");
-                var serializer = new SerializerBuilder()
-                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                    .Build();
-                var yaml = serializer.Serialize(newSettings);
-                File.WriteAllText(settingsFilePath, yaml);
-                settings = newSettings;
-                LogInfo("Settings updated successfully.");
-            }
-            catch (Exception ex)
-            {
-                LogError("Error updating settings: " + ex.Message);
-                throw;
-            }
-        }
-
-        public void ClearLogs()
-        {
-            try
-            {
-                if (File.Exists(logFilePath))
-                {
-                    File.Delete(logFilePath);
-                }
-                LogInfo("Logs cleared successfully.");
-            }
-            catch (Exception ex)
-            {
-                LogError("Error clearing logs: " + ex.Message);
-                throw;
-            }
-        }
-
-        internal void LogError(string message)
-        {
-            if (settings.logging == "file" || settings.logging == "consoleandfile" || settings.logging == "fileandconsole")
-            {
-                try
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
-                    File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}{Environment.NewLine}");
-                }
-                catch
-                {
-                    // Ignore any errors while logging to avoid recursive issues
-                }
-            }
-            if (settings.logging == "console" || settings.logging == "consoleandfile" || settings.logging == "fileandconsole")
-            {
-                Console.WriteLine(message);
-            }
-        }
-
-        internal void LogInfo(string message)
-        {
-            if (settings.logging == "file" || settings.logging == "consoleandfile" || settings.logging == "fileandconsole")
-            {
-                try
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
-                    File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}{Environment.NewLine}");
-                }
-                catch
-                {
-                    // Ignore any errors while logging to avoid recursive issues
-                }
-            }
-            if (settings.logging == "console" || settings.logging == "consoleandfile" || settings.logging == "fileandconsole")
-            {
-                Console.WriteLine(message);
-            }
         }
 
         internal DbDataAdapter getAdapter(IDbCommand command, string dbType = null)
@@ -424,6 +149,49 @@ namespace Relfost.Database
                 "sqlite" => new SQLiteDataAdapter((SQLiteCommand)command),
                 _ => throw new Exception("Unsupported database driver.")
             };
+        }
+
+        public void LogError(string message)
+        {
+            if (settings.logging == "file" || settings.logging == "consoleandfile" || settings.logging == "fileandconsole")
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
+                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
+            }
+            if (settings.logging == "console" || settings.logging == "consoleandfile" || settings.logging == "fileandconsole")
+            {
+                Console.WriteLine($"{DateTime.Now}: {message}");
+            }
+        }
+
+        public void UpdateConfig(Configuration newConfig)
+        {
+            config = newConfig;
+            var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "Relfost.Database", "config.yaml");
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            var yaml = serializer.Serialize(config);
+            File.WriteAllText(configFilePath, yaml);
+        }
+
+        public void UpdateSettings(Settings newSettings)
+        {
+            settings = newSettings;
+            var settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "carbon", "extensions", "Relfost.Database", "settings.yaml");
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            var yaml = serializer.Serialize(settings);
+            File.WriteAllText(settingsFilePath, yaml);
+        }
+
+        public void ClearLogs()
+        {
+            if (File.Exists(logFilePath))
+            {
+                File.Delete(logFilePath);
+            }
         }
 
         public class Configuration

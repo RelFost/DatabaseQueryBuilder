@@ -1,13 +1,13 @@
 # Database: Query Builder
 
-#### \# [Introduction](#introduction)
-#### \# [Running Database Queries](#running-database-queries)
-#####       \# [Chunking Results](#chunking-results)
-#####       \# [Streaming Results Lazily](#streaming-results-lazily)
-#####       \# [Aggregates](#aggregates)
-#### \# [Select Statements](#select-statements)
-#### \# [Raw Expressions](#raw-expressions)
-#### \# [Joins](#joins)
+#### \# [Introduction](#-introduction)
+#### \# [Running Database Queries](#-running-database-queries)
+#####       \# [Chunking Results](#-chunking-results)
+#####       \# [Streaming Results Lazily](#-streaming-results-lazily)
+#####       \# [Aggregates](#-aggregates)
+#### \# [Select Statements](#-select-statements)
+#### \# [Raw Expressions](#-raw-expressions)
+#### \# [Joins](#-joins)
 
 ## \# Introduction
 
@@ -102,12 +102,23 @@ If you need to work with thousands of database records, consider using the `chun
 
 ```csharp
 await DB.table("users").orderBy("id").chunk(100, async (users) => {
-    foreach (var user in users.Rows)
+    foreach (DataRow user in users.Rows)
     {
-        // Process the records...
+        // ...
     }
 });
 ```
+
+To stop processing the additional chunks, you may return `false` from the `Closure`:
+
+```csharp
+await DB.table("users").orderBy("id").chunk(100, async (users) => {
+    // Process the records...
+
+    return false;
+});
+```
+
 
 If you are updating database records while chunking results, your chunk results could change unexpectedly. So, when updating records while chunking, it is always best to use the `chunkById` method. This method will automatically paginate the results based on the primary key:
 
@@ -122,14 +133,36 @@ await DB.table("users").where("active", false).chunkById(100, async (users) => {
 });
 ```
 
-To stop processing the additional chunks, you may return `false` from the `Closure`:
+### \# Streaming Results Lazily
+
+The `lazy` method works similarly to the `chunk` method in that it executes the query in chunks. However, instead of passing each chunk into a callback, the `lazy()` method processes each record one at a time using a callback function:
 
 ```csharp
-await DB.table("users").orderBy("id").chunk(100, async (users) => {
-    // Process the records...
-    return false; // Stop further chunk processing
+await DB.table("users").orderBy("id").lazy(async (DataRow user) =>
+{
+    // ...
 });
 ```
+
+If you plan to update the retrieved records while iterating over them, it is best to use the `lazyById` or `lazyByIdDesc` methods instead. These methods automatically paginate the results based on the record's primary key:
+
+```csharp
+await DB.table("users").where("active", false)
+        .lazyById(async (DataRow user) =>
+        {
+            await DB.table("users")
+                .where("id", user["id"])
+                .update(new Dictionary<string, object>
+                {
+                    { "active", true }
+                });
+        });
+```
+
+<p>
+<img width="80px" height="80px" src="https://laravel.com/img/callouts/exclamation.min.svg">
+!!! When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.
+</p>
 
 ### \# Aggregates
 
