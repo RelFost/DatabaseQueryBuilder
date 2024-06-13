@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netframework4.8.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Configurations>Carbon;Oxide;Host</Configurations>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <BaseOutputPath>
+    </BaseOutputPath>
+    <Version>1.1.1.1</Version>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Oxide|AnyCPU'">
+    <DefineConstants>$(DefineConstants)TRACE;RUST</DefineConstants>
+    <OutputPath>bin\Oxide\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Carbon|AnyCPU'">
+    <DefineConstants>$(DefineConstants)TRACE;RUST;CARBON</DefineConstants>
+    <OutputPath>bin\Carbon\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Host|AnyCPU'">
+    <DefineConstants>$(DefineConstants)TRACE;RUST;CARBON</DefineConstants>
+    <OutputPath>bin\Oxide\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Carbon' Or '$(Configuration)' == 'Host' ">
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+    <PackageReference Include="Carbon.Community" Version="*" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Oxide' Or '$(Configuration)' == 'Host' ">
+    <PackageReference Include="Oxide" Version="1.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" />
+    <PackageReference Include="MySql.Data" Version="8.0.33" />
+    <PackageReference Include="WebSocketSharp-netstandard" Version="1.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.116" />
+    <PackageReference Include="YamlDotNet" Version="11.2.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+</Project>

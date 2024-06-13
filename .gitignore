@@ -1,0 +1,13 @@
+# Ignore bin and obj directories
+src/bin/
+src/obj/
+
+# Ignore PowerShell build scripts
+# build_and_deploy_main.bat
+# build_and_deploy_main.ps1
+# build_and_deploy_dev.bat
+# build_and_deploy_dev.ps1
+
+# Ignore Linux build scripts
+# build_and_deploy_dev.sh
+# build_and_deploy_main.sh
