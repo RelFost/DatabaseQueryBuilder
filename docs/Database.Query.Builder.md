@@ -1,13 +1,13 @@
 # Database: Query Builder
 
-#### \# [Introduction](#-introduction)
-#### \# [Running Database Queries](#-running-database-queries)
-#####       \# [Chunking Results](#-chunking-results)
-#####       \# [Streaming Results Lazily](#-streaming-results-lazily)
-#####       \# [Aggregates](#-aggregates)
-#### \# [Select Statements](#-select-statements)
-#### \# [Raw Expressions](#-raw-expressions)
-#### \# [Joins](#-joins)
+#### ![](assets/hashtag-12.png) [Introduction](#-introduction)
+#### ![](assets/hashtag-12.png) [Running Database Queries](#-running-database-queries)
+#####       ![](assets/hashtag-12.png) [Chunking Results](#-chunking-results)
+#####       ![](assets/hashtag-12.png) [Streaming Results Lazily](#-streaming-results-lazily)
+#####       ![](assets/hashtag-12.png) [Aggregates](#-aggregates)
+#### ![](assets/hashtag-12.png) [Select Statements](#-select-statements)
+#### ![](assets/hashtag-12.png) [Raw Expressions](#-raw-expressions)
+#### ![](assets/hashtag-12.png) [Joins](#-joins)
 
 ## ![](assets/hashtag-20.png) Introduction
 
