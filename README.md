@@ -1,88 +1,127 @@
 
-# Carbonmod Extension Development Template
+# Database Query Builder
 
-## Project Overview
+This is a versatile and robust database query builder for .NET applications. It supports PostgreSQL, MySQL, MariaDB, and SQLite. The library provides an easy-to-use interface for building and executing complex SQL queries.
 
-This project is a template designed to simplify the development of extensions for Carbonmod. It includes scripts to build and deploy extensions both in a development environment and for production.
+## Features
 
-## Prerequisites
+- Supports PostgreSQL, MySQL, MariaDB, and SQLite
+- Fluent API for building queries
+- JSON querying capabilities
+- Supports complex query conditions (AND, OR, NOT)
+- Supports JOINs, GROUP BY, HAVING, ORDER BY, LIMIT, and OFFSET
+- Supports schema selection for PostgreSQL
 
-- .NET Framework 4.8.1
-- Git
-- PowerShell (for Windows scripts)
-- Bash (for Linux scripts)
+## Installation
 
-## File Structure
-
-```
-.
-├── build_and_deploy_dev.bat
-├── build_and_deploy_dev.ps1
-├── build_and_deploy_dev.sh
-├── build_and_deploy_main.bat
-├── build_and_deploy_main.ps1
-├── build_and_deploy_main.sh
-├── src
-│   ├── CarbonExtension.Template.csproj
-│   └── ExtensionEntrypoint.cs
-└── .gitignore
-```
+Simply place the contents of the `build/carbon` folder into the `carbon` folder of your project. No additional downloads are required.
 
 ## Usage
 
-### Windows
+### Configuration
 
-For development:
-```sh
-build_and_deploy_dev.bat
+The configuration file (`config.yaml`) should be placed in the appropriate directory as specified in the `DatabaseQueryBuilder.cs`. The file should have the following structure:
+
+```yaml
+# Default database connection to use
+default: pgsql
+
+# Database connections configuration
+connections:
+  pgsql:
+    driver: pgsql
+    host: localhost
+    port: 5432
+    database: postgres
+    username: postgres
+    password: postgres
+  mysql:
+    driver: mysql
+    host: localhost
+    port: 3306
+    database: database
+    username: root
+    password: ''
+    charset: utf8mb4
+    collation: utf8mb4_unicode_ci
+    prefix: ''
+    prefixIndexes: true
+    strict: true
+    sslmode: preferred
+  sqlite:
+    driver: sqlite
+    database: database.sqlite
+    foreignKeyConstraints: true
+  mariadb:
+    driver: mariadb
+    host: localhost
+    port: 3306
+    database: database
+    username: root
+    password: ''
+    charset: utf8mb4
+    collation: utf8mb4_unicode_ci
+    prefix: ''
+    prefixIndexes: true
+    strict: true
+    sslmode: preferred
 ```
 
-For production:
-```sh
-build_and_deploy_main.bat
+### Important Note
+
+If you encounter any issues with the configuration, simply delete the `config.yaml` file. The `DatabaseQueryBuilder` will automatically regenerate the configuration file with default settings upon initialization.
+
+### Basic Example
+
+Here is an example of how to use the `DatabaseQueryBuilder` as a plugin within the Carbon framework:
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+using Relfost.Support.Facades;
+using Carbon.Plugins;
+
+namespace Carbon.Plugins
+{
+    [Info("DatabaseQueryPlugin", "YourName", "1.0.0")]
+    [Description("A plugin to demonstrate the DatabaseQueryBuilder")]
+    public class DatabaseQueryPlugin : CarbonPlugin
+    {
+        private void OnServerInitialized()
+        {
+            PrintUsers().ConfigureAwait(false);
+        }
+
+        private async Task PrintUsers()
+        {
+            try
+            {
+                var users = await DB.Table("users").limit(20).get();
+
+                foreach (DataRow user in users.Rows)
+                {
+                    Puts($"{user["id"]}: {user["name"]} - Active: {user["active"]}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Puts($"Error fetching users: {ex.Message}");
+            }
+        }
+    }
+}
 ```
 
-### Linux (Ubuntu/Arch)
+## Documentation
 
-For development:
-```sh
-chmod +x build_and_deploy_dev.sh
-./build_and_deploy_dev.sh
-```
+For detailed information and advanced usage, refer to the [Database Query Builder Documentation](docs/Database.QueryBuilder.md).
 
-For production:
-```sh
-chmod +x build_and_deploy_main.sh
-./build_and_deploy_main.sh
-```
+## Contributing
 
-## Git Ignore
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-To prevent certain files from being tracked by Git, you should add them to your `.gitignore` file. After cloning the repository, uncomment the lines for the scripts.
+## License
 
-```
-# Ignore bin and obj directories
-src/bin/
-src/obj/
-
-# Ignore PowerShell build scripts
-# build_and_deploy_main.bat
-# build_and_deploy_main.ps1
-# build_and_deploy_dev.bat
-# build_and_deploy_dev.ps1
-
-# Ignore Linux build scripts
-# build_and_deploy_dev.sh
-# build_and_deploy_main.sh
-```
-
-## Contribution
-
-To contribute to this project, follow these steps:
-
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature-branch`).
-3. Make your changes.
-4. Commit your changes (`git commit -am 'Add new feature'`).
-5. Push to the branch (`git push origin feature-branch`).
-6. Create a new Pull Request.
+This project is licensed under the MIT License.
