@@ -116,7 +116,7 @@ namespace Carbon.Plugins
 
 ## Documentation
 
-For detailed information and advanced usage, refer to the [Database Query Builder Documentation](docs/Database.QueryBuilder.md).
+For detailed information and advanced usage, refer to the [Database Query Builder Documentation](docs/Database.Query.Builder.md).
 
 ## Contributing
 
