@@ -438,13 +438,22 @@ namespace Relfost.Database.Query
                 }
 
                 var continueProcessing = await callback(results);
-                if (continueProcessing == false)
+                if (!continueProcessing)
                 {
                     break;
                 }
 
                 offset += count;
             }
+        }
+
+        public async Task chunk(int count, Func<DataTable, Task> callback)
+        {
+            await chunk(count, async chunk =>
+            {
+                await callback(chunk);
+                return true;
+            });
         }
 
         public async Task chunkById(int count, Func<DataTable, Task<bool>> callback)
@@ -459,13 +468,22 @@ namespace Relfost.Database.Query
                 }
 
                 var continueProcessing = await callback(results);
-                if (continueProcessing == false)
+                if (!continueProcessing)
                 {
                     break;
                 }
 
                 lastId = Convert.ToInt32(results.Rows[results.Rows.Count - 1]["id"]);
             }
+        }
+
+        public async Task chunkById(int count, Func<DataTable, Task> callback)
+        {
+            await chunkById(count, async chunk =>
+            {
+                await callback(chunk);
+                return true;
+            });
         }
 
         public async Task chunkByIdDesc(int count, Func<DataTable, Task<bool>> callback)
@@ -480,13 +498,22 @@ namespace Relfost.Database.Query
                 }
 
                 var continueProcessing = await callback(results);
-                if (continueProcessing == false)
+                if (!continueProcessing)
                 {
                     break;
                 }
 
                 lastId = Convert.ToInt32(results.Rows[results.Rows.Count - 1]["id"]);
             }
+        }
+
+        public async Task chunkByIdDesc(int count, Func<DataTable, Task> callback)
+        {
+            await chunkByIdDesc(count, async chunk =>
+            {
+                await callback(chunk);
+                return true;
+            });
         }
 
         public async Task<List<Dictionary<string, object>>> lazy()
