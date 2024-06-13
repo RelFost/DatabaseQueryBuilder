@@ -164,7 +164,7 @@ await DB.table("users").where("active", false)
 When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.<br><br>
 </p>
 
-### \# Aggregates
+### ![](assets/hashtag.png) Aggregates
 
 The query builder also provides a variety of aggregate methods, such as `count`, `max`, `min`, `avg`, and `sum`:
 
