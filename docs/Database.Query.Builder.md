@@ -58,33 +58,50 @@ namespace Carbon.Plugins
 If you just need to retrieve a single row from the database, you may use the `first` method. This method will return a single `DataRow` instance:
 
 ```csharp
-DataRow user = await DB.table('users').where('name', 'John').first();
+DataRow user = await DB.table("users").where("name", "John").first();
 ```
 
-If you don't even need an entire row, you may extract a single value from a record using the `value` method. This method will return the value of the column directly:
+If you don"t even need an entire row, you may extract a single value from a record using the `value` method. This method will return the value of the column directly:
 
 ```csharp
-var email = await DB.table('users').where('name', 'John').value('email');
+object email = await DB.table("users").where("name", "John").value("email");
 ```
+
+To retrieve a single row by its id column value, use the find method:
+
+```csharp
+DataRow user = await DB.table("users").find(3);
+```
+
+### Retrieving a List of Column Values
 
 To retrieve a list of column values, you may use the `pluck` method. For example, this method will retrieve a list of user names:
 
 ```csharp
-var names = await DB.table('users').pluck('name');
+object[] names = await DB.table("users").pluck("name");
+foreach (object name in names)
+{
+    Puts($"{name}");
+}
 ```
 
 You may also specify more than one column that you wish to retrieve:
 
 ```csharp
-var users = await DB.table('users').pluck('name', 'email');
+List<Dictionary<string, object>> users = await DB.table("users").pluck("name", "email");
+
+foreach (Dictionary<string, object> user in users)
+{
+    Puts($"Name: {user["name"]}, Email: {user["email"]}");
+}
 ```
 
 ### Chunking Results
 
-If you need to work with thousands of database records, consider using the `chunk` method. This method retrieves a small chunk of the results at a time and feeds each chunk into a `Closure` for processing. Here's an example of processing records in chunks of 100:
+If you need to work with thousands of database records, consider using the `chunk` method. This method retrieves a small chunk of the results at a time and feeds each chunk into a `Closure` for processing. Here"s an example of processing records in chunks of 100:
 
 ```csharp
-await DB.table('users').orderBy('id').chunk(100, async (users) => {
+await DB.table("users").orderBy("id").chunk(100, async (users) => {
     foreach (var user in users.Rows)
     {
         // Process the records...
@@ -95,11 +112,11 @@ await DB.table('users').orderBy('id').chunk(100, async (users) => {
 If you are updating database records while chunking results, your chunk results could change unexpectedly. So, when updating records while chunking, it is always best to use the `chunkById` method. This method will automatically paginate the results based on the primary key:
 
 ```csharp
-await DB.table('users').where('active', false).chunkById(100, async (users) => {
+await DB.table("users").where("active", false).chunkById(100, async (users) => {
     foreach (var user in users.Rows)
     {
-        await DB.table('users').where('id', user['id']).update(new Dictionary<string, object> {
-            { 'active', true }
+        await DB.table("users").where("id", user["id"]).update(new Dictionary<string, object> {
+            { "active", true }
         });
     }
 });
@@ -108,7 +125,7 @@ await DB.table('users').where('active', false).chunkById(100, async (users) => {
 To stop processing the additional chunks, you may return `false` from the `Closure`:
 
 ```csharp
-await DB.table('users').orderBy('id').chunk(100, async (users) => {
+await DB.table("users").orderBy("id").chunk(100, async (users) => {
     // Process the records...
     return false; // Stop further chunk processing
 });
@@ -119,46 +136,46 @@ await DB.table('users').orderBy('id').chunk(100, async (users) => {
 The query builder also provides a variety of aggregate methods, such as `count`, `max`, `min`, `avg`, and `sum`:
 
 ```csharp
-var users = await DB.table('users').count();
-var price = await DB.table('orders').max('price');
-var price = await DB.table('orders').where('finalized', 1).avg('price');
+var users = await DB.table("users").count();
+var price = await DB.table("orders").max("price");
+var price = await DB.table("orders").where("finalized", 1).avg("price");
 ```
 
 ### Determining If Records Exist
 
-Instead of using the `count` method to determine if any records exist that match your query's constraints, you may use the `exists` and `doesntExist` methods:
+Instead of using the `count` method to determine if any records exist that match your query"s constraints, you may use the `exists` and `doesntExist` methods:
 
 ```csharp
-if (await DB.table('users').where('finalized', 1).exists())
+if (await DB.table("users").where("finalized", 1).exists())
 {
     // ...
 }
 
-if (await DB.table('users').where('finalized', 1).doesntExist())
+if (await DB.table("users").where("finalized", 1).doesntExist())
 {
     // ...
 }
 ```
 
-### Selects
+### Select Statements
 
 The `select` method allows you to specify the `select` clause for the query:
 
 ```csharp
-var users = await DB.table('users').select('name', 'email as user_email').get();
+var users = await DB.table("users").select("name", "email as user_email").get();
 ```
 
 The `distinct` method allows you to force the query to return distinct results:
 
 ```csharp
-var users = await DB.table('users').distinct().get();
+var users = await DB.table("users").distinct().get();
 ```
 
 If you already have a query builder instance and you wish to add a column to its existing select clause, you may use the `addSelect` method:
 
 ```csharp
-var query = DB.table('users').select('name');
-var users = await query.addSelect('age').get();
+var query = DB.table("users").select("name");
+var users = await query.addSelect("age").get();
 ```
 
 ### Raw Expressions
@@ -166,7 +183,7 @@ var users = await query.addSelect('age').get();
 Sometimes you may need to use a raw expression in a query. To create a raw expression, you may use the `DB.raw` method:
 
 ```csharp
-var users = await DB.table('users').select(DB.raw('count(*) as user_count, status')).where('status', '<>', 1).groupBy('status').get();
+var users = await DB.table("users").select(DB.raw("count(*) as user_count, status")).where("status", "<>", 1).groupBy("status").get();
 ```
 
 You can also use the following methods to insert raw expressions into various parts of your query:
@@ -174,31 +191,31 @@ You can also use the following methods to insert raw expressions into various pa
 #### `selectRaw`
 
 ```csharp
-var orders = await DB.table('orders').selectRaw('price * ? as price_with_tax', new object[] { 1.0825 }).get();
+var orders = await DB.table("orders").selectRaw("price * ? as price_with_tax", new object[] { 1.0825 }).get();
 ```
 
 #### `whereRaw` / `orWhereRaw`
 
 ```csharp
-var orders = await DB.table('orders').whereRaw('price > IF(state = "TX", ?, 100)', new object[] { 200 }).get();
+var orders = await DB.table("orders").whereRaw("price > IF(state = "TX", ?, 100)", new object[] { 200 }).get();
 ```
 
 #### `havingRaw` / `orHavingRaw`
 
 ```csharp
-var orders = await DB.table('orders').select('department', DB.raw('SUM(price) as total_sales')).groupBy('department').havingRaw('SUM(price) > ?', new object[] { 2500 }).get();
+var orders = await DB.table("orders").select("department", DB.raw("SUM(price) as total_sales")).groupBy("department").havingRaw("SUM(price) > ?", new object[] { 2500 }).get();
 ```
 
 #### `orderByRaw`
 
 ```csharp
-var orders = await DB.table('orders').orderByRaw('updated_at - created_at DESC').get();
+var orders = await DB.table("orders").orderByRaw("updated_at - created_at DESC").get();
 ```
 
 #### `groupByRaw`
 
 ```csharp
-var orders = await DB.table('orders').select('city', 'state').groupByRaw('city, state').get();
+var orders = await DB.table("orders").select("city", "state").groupByRaw("city, state").get();
 ```
 
 ### Advanced Join Clauses
@@ -206,19 +223,19 @@ var orders = await DB.table('orders').select('city', 'state').groupByRaw('city, 
 Joining multiple tables is a breeze. Just use the `join` method. The basic usage is:
 
 ```csharp
-var users = await DB.table('users').join('contacts', 'users.id', '=', 'contacts.user_id').select('users.*', 'contacts.phone').get();
+var users = await DB.table("users").join("contacts", "users.id", "=", "contacts.user_id").select("users.*", "contacts.phone").get();
 ```
 
 For a left join, you can use the `leftJoin` method, and for a right join, the `rightJoin` method:
 
 ```csharp
-var users = await DB.table('users').leftJoin('posts', 'users.id', '=', 'posts.user_id').get();
-var users = await DB.table('users').rightJoin('posts', 'users.id', '=', 'posts.user_id').get();
+var users = await DB.table("users").leftJoin("posts", "users.id", "=", "posts.user_id").get();
+var users = await DB.table("users").rightJoin("posts", "users.id", "=", "posts.user_id").get();
 ```
 
 For a cross join, you can use the `crossJoin` method:
 
 ```csharp
-var users = await DB.table('users').crossJoin('colors').get();
+var users = await DB.table("users").crossJoin("colors").get();
 ```
 
