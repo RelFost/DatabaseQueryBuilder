@@ -164,6 +164,12 @@ await DB.table("users").where("active", false)
 <br>When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.<br>
 </p>
 
+<table><tr><td>
+    <img src="https://laravel.com/img/callouts/exclamation.min.svg" />
+</td><td>
+When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.
+</td></tr></table>
+
 ### \# Aggregates
 
 The query builder also provides a variety of aggregate methods, such as `count`, `max`, `min`, `avg`, and `sum`:
