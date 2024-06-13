@@ -1,10 +1,10 @@
 # Database: Query Builder
 
-* #### \# [Introduction](#introduction)
-+ #### \# [Running Database Queries](#running-database-queries)
-##### > \# [Chunking Results](#chunking-results)
-##### > \# [Streaming Results Lazily](#streaming-results-lazily)
-##### > \# [Aggregates](#aggregates)
+#### \# [Introduction](#introduction)
+#### \# [Running Database Queries](#running-database-queries)
+#####   \# [Chunking Results](#chunking-results)
+#####   \# [Streaming Results Lazily](#streaming-results-lazily)
+#####   \# [Aggregates](#aggregates)
 #### \# [Select Statements](#select-statements)
 #### \# [Raw Expressions](#raw-expressions)
 #### \# [Joins](#joins)
