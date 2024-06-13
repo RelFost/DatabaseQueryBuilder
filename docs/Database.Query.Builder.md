@@ -160,15 +160,9 @@ await DB.table("users").where("active", false)
 ```
 
 <p>
-<a href="#-streaming-results-lazily-1"><img align="left" width="80px" height="80px" src="https://laravel.com/img/callouts/exclamation.min.svg" /></a>
+<a href="#-streaming-results-lazily-1"><img align="left" width="80px" height="80px" src="https://github.com/RelFost/Carbon.Extension.Relfost.Database/blob/premaster/docs/assets/warning.png?raw=true" /></a>
 <br>When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.<br>
 </p>
-
-<table><tr><td>
-    <img src="https://laravel.com/img/callouts/exclamation.min.svg" />
-</td><td>
-When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.
-</td></tr></table>
 
 ### \# Aggregates
 
