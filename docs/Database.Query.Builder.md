@@ -163,7 +163,7 @@ await DB.table("users").where("active", false)
 <a href="#" style="flex: 0 0 auto;"><img  valign="middle" width="80px" height="80px" src="https://laravel.com/img/callouts/exclamation.min.svg" /></a>
 !!! When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.
 </p>
-[Alt text](https://laravel.com/img/callouts/exclamation.min.svg?raw=true "Title")
+![Alt text](https://laravel.com/img/callouts/exclamation.min.svg)
 
 ### \# Aggregates
 
