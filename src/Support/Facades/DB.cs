@@ -10,47 +10,47 @@ namespace Relfost.Support.Facades
     {
         private static readonly DatabaseManager _dbManager = new DatabaseManager();
 
-        public static Builder Table(string tableName)
+        public static Builder table(string tableName)
         {
             return _dbManager.table(tableName);
         }
 
-        public static async Task<T> Scalar<T>(string query, string dbType = null)
+        public static async Task<T> scalar<T>(string query, string dbType = null)
         {
             return await _dbManager.scalar<T>(query, dbType);
         }
 
-        public static async Task CreateTable(string tableName, Dictionary<string, string> columns)
+        public static async Task createTable(string tableName, Dictionary<string, string> columns)
         {
             await _dbManager.createTable(tableName, columns);
         }
 
-        public static async Task<bool> TableExists(string tableName)
+        public static async Task<bool> tableExists(string tableName)
         {
             return await _dbManager.tableExists(tableName);
         }
 
-        public static async Task AddIndex(string tableName, string indexName, params string[] columns)
+        public static async Task addIndex(string tableName, string indexName, params string[] columns)
         {
             await _dbManager.addIndex(tableName, indexName, columns);
         }
 
-        public static async Task DropIndex(string tableName, string indexName)
+        public static async Task dropIndex(string tableName, string indexName)
         {
             await _dbManager.dropIndex(tableName, indexName);
         }
 
-        public static void UpdateConfig(DatabaseManager.Configuration newConfig)
+        public static void updateConfig(DatabaseManager.Configuration newConfig)
         {
             _dbManager.UpdateConfig(newConfig);
         }
 
-        public static void UpdateSettings(DatabaseManager.Settings newSettings)
+        public static void updateSettings(DatabaseManager.Settings newSettings)
         {
             _dbManager.UpdateSettings(newSettings);
         }
 
-        public static void ClearLogs()
+        public static void clearLogs()
         {
             _dbManager.ClearLogs();
         }
