@@ -159,13 +159,9 @@ await DB.table("users").where("active", false)
         });
 ```
 
-<p>
-<a href="#"><img  valign="middle" width="80px" height="80px" src="https://laravel.com/img/callouts/exclamation.min.svg" /></a>
+<p style="display: flex;align-items: center;">
+<a href="" style="flex: 0 0 auto;"><img  valign="middle" width="80px" height="80px" src="https://laravel.com/img/callouts/exclamation.min.svg" /></a>
 !!! When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.
-</p>
-<p>
-<a href="#"><img  valign="middle" width="80px" height="80px" src="https://laravel.com/img/callouts/exclamation.min.svg" />
-!!! When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.</a>
 </p>
 
 ### \# Aggregates
