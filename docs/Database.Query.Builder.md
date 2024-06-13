@@ -1,5 +1,19 @@
 
+<style>
+code {
+  color: rgb(235 68 50 / 1);
+}
+</style>
 # Database: Query Builder
+
+[Introduction](#Introduction)
+[Running Database Queries](#Running Database Queries)
+    [Chunking Results](#Chunking Results)
+    [Streaming Results Lazily](#Streaming Results Lazily)
+    [Aggregates](#Aggregates)
+[Select Statements](#Select Statements)
+[Raw Expressions](#Raw Expressions)
+[Joins](#Joins)
 
 ## Introduction
 
@@ -14,7 +28,35 @@ The query builder uses parameter binding to protect your application against SQL
 You may use the `table` method provided by the `DB` facade to begin a query. The `table` method returns a fluent query builder instance for the given table, allowing you to chain more constraints onto the query and then finally retrieve the results of the query using the `get` method:
 
 ```csharp
-var users = await DB.table('users').get();
+using System;
+using System.Data;
+using System.Threading.Tasks;
+using Relfost.Support.Facades;
+using Carbon.Plugins;
+
+namespace Carbon.Plugins
+{
+    [Info("Template", "AuthorName", "1.0.0")]
+    [Description("Plugin to test database functionality.")]
+    public class Template : CarbonPlugin
+    {
+        private void OnServerInitialized()
+        {
+            Puts("Template Initializated");
+            PrintUsers().ConfigureAwait(false);
+        }
+
+        private async Task PrintUsers()
+        {
+            DataTable users = await DB.table("users").limit(10).get();
+
+            foreach (DataRow user in users.Rows)
+            {
+                Puts($"{user["id"]}: {user["name"]} - Active: {user["active"]}");
+            }
+        }
+    }
+}
 ```
 
 ### Retrieving a Single Row / Column From a Table
@@ -22,7 +64,7 @@ var users = await DB.table('users').get();
 If you just need to retrieve a single row from the database, you may use the `first` method. This method will return a single `DataRow` instance:
 
 ```csharp
-var user = await DB.table('users').where('name', 'John').first();
+DataRow user = await DB.table('users').where('name', 'John').first();
 ```
 
 If you don't even need an entire row, you may extract a single value from a record using the `value` method. This method will return the value of the column directly:
