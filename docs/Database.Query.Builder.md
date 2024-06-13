@@ -164,7 +164,7 @@ await DB.table("users").where("active", false)
 When updating or deleting records while iterating over them, any changes to the primary key or foreign keys could affect the chunk query. This could potentially result in records not being included in the results.<br><br>
 </p>
 
-### <a href="#-aggregates-1"><img width="25px" height="25px" src="https://github.com/RelFost/Carbon.Extension.Relfost.Database/blob/premaster/docs/assets/hashtag3.png?raw=true" /></a> Aggregates
+### <a href="#-aggregates-1"><img width="25px" height="26px" src="https://github.com/RelFost/Carbon.Extension.Relfost.Database/blob/premaster/docs/assets/hashtag4.png?raw=true" /></a> Aggregates
 
 The query builder also provides a variety of aggregate methods, such as `count`, `max`, `min`, `avg`, and `sum`:
 
