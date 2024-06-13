@@ -1,25 +1,13 @@
-
-<svg fill="none" viewBox="0 0 600 300" width="600" height="300" xmlns="http://www.w3.org/2000/svg">
-  <foreignObject width="100%" height="100%">
-    <div xmlns="http://www.w3.org/1999/xhtml">
-        <style>
-            code {
-                color: rgb(235 68 50 / 1);
-            }
-        </style>
-    </div>
-  </foreignObject>
-</svg>
 # Database: Query Builder
 
-[Introduction](#Introduction)
-[Running Database Queries](#Running Database Queries)
-    [Chunking Results](#Chunking Results)
-    [Streaming Results Lazily](#Streaming Results Lazily)
-    [Aggregates](#Aggregates)
-[Select Statements](#Select Statements)
-[Raw Expressions](#Raw Expressions)
-[Joins](#Joins)
+[Introduction](#introduction)
+[Running Database Queries](#running-database-queries)
+    [Chunking Results](#chunking-results)
+    [Streaming Results Lazily](#streaming-results-lazily)
+    [Aggregates](#aggregates)
+[Select Statements](#select-statements)
+[Raw Expressions](#raw-expressions)
+[Joins](#joins)
 
 ## Introduction
 
