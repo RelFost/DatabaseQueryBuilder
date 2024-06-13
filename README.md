@@ -73,7 +73,7 @@ If you encounter any issues with the configuration, simply delete the `config.ya
 
 ### Basic Example
 
-Here is an example of how to use the `DatabaseQueryBuilder` as a plugin within the Carbon framework:
+Here is an example of how to use the `Relfost.Database` as a plugin within the Carbon framework:
 
 ```csharp
 using System;
@@ -85,9 +85,9 @@ using Carbon.Plugins;
 
 namespace Carbon.Plugins
 {
-    [Info("DatabaseQueryPlugin", "YourName", "1.0.0")]
-    [Description("A plugin to demonstrate the DatabaseQueryBuilder")]
-    public class DatabaseQueryPlugin : CarbonPlugin
+    [Info("RelfostDatabasePlugin", "YourName", "1.0.0")]
+    [Description("A plugin to demonstrate the Relfost.Database")]
+    public class RelfostDatabasePlugin : CarbonPlugin
     {
         private void OnServerInitialized()
         {
@@ -98,7 +98,7 @@ namespace Carbon.Plugins
         {
             try
             {
-                var users = await DB.Table("users").limit(20).get();
+                var users = await DB.table("users").limit(20).get();
 
                 foreach (DataRow user in users.Rows)
                 {
