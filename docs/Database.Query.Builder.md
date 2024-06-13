@@ -9,15 +9,15 @@
 #### \# [Raw Expressions](#raw-expressions)
 #### \# [Joins](#joins)
 
-## Introduction
+## \# Introduction
 
 The query builder provides a convenient, fluent interface for creating and running database queries. It can be used to perform most database operations in your application and works perfectly with all supported database systems.
 
 The query builder uses parameter binding to protect your application against SQL injection attacks. There is no need to clean or sanitize strings passed to the query builder as query bindings.
 
-## Running Database Queries
+## \# Running Database Queries
 
-### Retrieving All Rows From a Table
+### \# Retrieving All Rows From a Table
 
 You may use the `table` method provided by the `DB` facade to begin a query. The `table` method returns a fluent query builder instance for the given table, allowing you to chain more constraints onto the query and then finally retrieve the results of the query using the `get` method:
 
@@ -53,7 +53,7 @@ namespace Carbon.Plugins
 }
 ```
 
-### Retrieving a Single Row / Column From a Table
+### \# Retrieving a Single Row / Column From a Table
 
 If you just need to retrieve a single row from the database, you may use the `first` method. This method will return a single `DataRow` instance:
 
@@ -73,7 +73,7 @@ To retrieve a single row by its id column value, use the find method:
 DataRow user = await DB.table("users").find(3);
 ```
 
-### Retrieving a List of Column Values
+### \# Retrieving a List of Column Values
 
 To retrieve a list of column values, you may use the `pluck` method. For example, this method will retrieve a list of user names:
 
@@ -96,7 +96,7 @@ foreach (Dictionary<string, object> user in users)
 }
 ```
 
-### Chunking Results
+### \# Chunking Results
 
 If you need to work with thousands of database records, consider using the `chunk` method. This method retrieves a small chunk of the results at a time and feeds each chunk into a `Closure` for processing. Here"s an example of processing records in chunks of 100:
 
@@ -131,7 +131,7 @@ await DB.table("users").orderBy("id").chunk(100, async (users) => {
 });
 ```
 
-### Aggregates
+### \# Aggregates
 
 The query builder also provides a variety of aggregate methods, such as `count`, `max`, `min`, `avg`, and `sum`:
 
@@ -141,7 +141,7 @@ var price = await DB.table("orders").max("price");
 var price = await DB.table("orders").where("finalized", 1).avg("price");
 ```
 
-### Determining If Records Exist
+### \# Determining If Records Exist
 
 Instead of using the `count` method to determine if any records exist that match your query"s constraints, you may use the `exists` and `doesntExist` methods:
 
@@ -157,7 +157,7 @@ if (await DB.table("users").where("finalized", 1).doesntExist())
 }
 ```
 
-### Select Statements
+### \# Select Statements
 
 The `select` method allows you to specify the `select` clause for the query:
 
@@ -178,7 +178,7 @@ var query = DB.table("users").select("name");
 var users = await query.addSelect("age").get();
 ```
 
-### Raw Expressions
+### \# Raw Expressions
 
 Sometimes you may need to use a raw expression in a query. To create a raw expression, you may use the `DB.raw` method:
 
