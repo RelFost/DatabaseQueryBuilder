@@ -1,13 +1,13 @@
 # Database: Query Builder
 
-#### ![](assets/hashtag-12.png) [Introduction](#-introduction)
-#### ![](assets/hashtag-12.png) [Running Database Queries](#-running-database-queries)
-#####       ![](assets/hashtag-12.png) [Chunking Results](#-chunking-results)
-#####       ![](assets/hashtag-12.png) [Streaming Results Lazily](#-streaming-results-lazily)
-#####       ![](assets/hashtag-12.png) [Aggregates](#-aggregates)
-#### ![](assets/hashtag-12.png) [Select Statements](#-select-statements)
-#### ![](assets/hashtag-12.png) [Raw Expressions](#-raw-expressions)
-#### ![](assets/hashtag-12.png) [Joins](#-joins)
+#### ![](assets/hashtag-12.png) [Introduction](#-introduction-1)
+#### ![](assets/hashtag-12.png) [Running Database Queries](#-running-database-queries-1)
+#####       ![](assets/hashtag-12.png) [Chunking Results](#-chunking-results-1)
+#####       ![](assets/hashtag-12.png) [Streaming Results Lazily](#-streaming-results-lazily-1)
+#####       ![](assets/hashtag-12.png) [Aggregates](#-aggregates-1)
+#### ![](assets/hashtag-12.png) [Select Statements](#-select-statements-1)
+#### ![](assets/hashtag-12.png) [Raw Expressions](#-raw-expressions-1)
+#### ![](assets/hashtag-12.png) [Joins](#-joins-1)
 
 ## ![](assets/hashtag-20.png) Introduction
 
@@ -174,9 +174,11 @@ When updating or deleting records while iterating over them, any changes to the 
 The query builder also provides a variety of aggregate methods, such as `count`, `max`, `min`, `avg`, and `sum`:
 
 ```csharp
-var users = await DB.table("users").count();
-var price = await DB.table("orders").max("price");
-var price = await DB.table("orders").where("finalized", 1).avg("price");
+int users = await DB.table("users").count();
+int price = await DB.table("orders").max<int>("price"); // the return type must be specified 
+int price = await DB.table("orders")
+                    .where("finalized", 1)
+                    .avg<int>("price"); // the return type must be specified 
 ```
 
 #### ![](assets/hashtag-16.png) Determining If Records Exist
